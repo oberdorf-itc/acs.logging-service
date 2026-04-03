@@ -16,8 +16,8 @@ import sys
 import paho.mqtt.client as mqtt
 import prometheus_client as prom
 import pytz
-from elasticsearch import Elasticsearch
-from opensearchpy import OpenSearch
+
+from .lib.elastic_functions import initialize_db_connection, insert_data
 
 __author__ = "Michael Oberdorf <info@oberdorf-itc.de>"
 __status__ = "production"
@@ -154,166 +154,6 @@ def __initialize_prometheus_exporter() -> dict:
         raise RuntimeError("The Prometheus exporter http endpoint failed to start.")
 
     return m
-
-
-def __initialize_db_connection() -> Elasticsearch | OpenSearch:
-    """
-    Initialize the database connection to Elasticsearch or OpenSearch based on the configuration.
-
-    :return The initialized database connection object.
-    :rtype Elasticsearch or OpenSearch
-    :raise ValueError: If the database configuration is not valid.
-    :raise Exception: If the database connection cannot be initialized.
-    """
-    if os.environ.get("DB_TYPE", "opensearch").lower() == "elasticsearch":
-        log.debug("Configure Elasticsearch connection")
-
-        hosts = list()
-        proto = "http"
-        if os.environ.get("DB_USE_SSL", "false").lower() == "true":
-            log.debug("Configure Elasticsearch connection to use TLS encryption.")
-            proto = "https"
-        for host in os.environ.get("DB_CLUSTER_NODES", "localhost:9200").split(","):
-            hosts.append(f"{proto}://{host}")
-        verify_certs = True
-        ssl_assert_hostname = True
-        if os.environ.get("DB_TLS_INSECURE", "false").lower() == "true":
-            verify_certs = False
-            ssl_assert_hostname = False
-            log.debug("Configure OpenSearch connection to use TLS with insecure mode.")
-
-        es = Elasticsearch(
-            hosts=os.environ.get("DB_CLUSTER_NODES", "localhost:9200").split(","),
-            api_key=__api_key__,
-            http_compress=True,  # enables gzip compression for request bodies
-            verify_certs=verify_certs,
-            ssl_assert_hostname=ssl_assert_hostname,
-            ssl_show_warn=False,
-            ca_certs=os.environ.get("DB_CACERT_FILE", "/etc/ssl/certs/ca-certificates.crt"),
-        )
-        if es.exists():
-            log.debug("Successfully connected to Elasticsearch cluster.")
-        else:
-            raise ConnectionError("Failed to connect to Elasticsearch cluster.")
-        return es
-    elif os.environ.get("DB_TYPE", "opensearch").lower() == "opensearch":
-        log.debug("Configure OpenSearch connection")
-
-        auth = None
-        if os.environ.get("DB_USERNAME", None) and __db_password__:
-            auth = (os.environ.get("DB_USERNAME"), __db_password__)
-        hosts = list()
-
-        for host in os.environ.get("DB_CLUSTER_NODES", "localhost:9200").split(","):
-            server = host.split(":")[0]
-            port = int(host.split(":")[1]) if len(host.split(":")) > 1 else 9200
-            hosts.append({"host": server, "port": port})
-
-        tls = False
-        if os.environ.get("DB_USE_SSL", "false").lower() == "true":
-            tls = True
-            log.debug("Configure OpenSearch connection to use TLS encryption.")
-        verify_certs = True
-        ssl_assert_hostname = True
-        if os.environ.get("DB_TLS_INSECURE", "false").lower() == "true":
-            verify_certs = False
-            ssl_assert_hostname = False
-            log.debug("Configure OpenSearch connection to use TLS with insecure mode.")
-
-        es = OpenSearch(
-            hosts=hosts,
-            http_compress=True,  # enables gzip compression for request bodies
-            http_auth=auth,
-            use_ssl=tls,
-            verify_certs=verify_certs,
-            ssl_assert_hostname=ssl_assert_hostname,
-            ssl_show_warn=False,
-            ca_certs=os.environ.get("DB_CACERT_FILE", "/etc/ssl/certs/ca-certificates.crt"),
-        )
-
-        if es.exists():
-            log.debug("Successfully connected to OpenSearch cluster.")
-        else:
-            raise ConnectionError("Failed to connect to OpenSearch cluster.")
-        return es
-    else:
-        raise ValueError("No valid database configuration found. Please check your environment variables.")
-
-
-def __prepareIndexName(index: str) -> str:
-    """
-    Prepare the index name by replacing placeholders with current date values.
-
-    :param index: The index name with placeholders
-    :type index: str
-    :return: The resolved index name
-    :rtype: str
-    """
-
-    elasticIndex = (
-        index.replace("{Y}", datetime.datetime.today().strftime("%Y"))
-        .replace("{m}", datetime.datetime.today().strftime("%m"))
-        .replace("{d}", datetime.datetime.today().strftime("%d"))
-    )
-
-    if index != elasticIndex:
-        log.debug("Replacing placeholders in index name:")
-        log.debug(f"  OLD: {index}")
-        log.debug(f"  NEW: {elasticIndex}")
-    else:
-        log.debug(f"No placeholders found in index name: {index}")
-
-    return elasticIndex
-
-
-def __createIndex(index: str, body: dict) -> None:
-    """
-    Create a new index in the database if it does not exist.
-
-    :param index: The name of the index to create
-    :type index: str
-    :param body: The settings and mappings for the index
-    :type body: dict
-    :return: None
-    :rtype: None
-    """
-    index = __prepareIndexName(index)
-
-    if not es.indices.exists(index=index):
-        host_port = os.environ.get("DB_CLUSTER_NODES", "localhost:9200").split(",")[0]
-        log.debug(f"Creating index: {host_port}{index}")
-        log.debug(f"  {body}")
-        es.indices.create(index=index, body=body)
-    else:
-        log.debug("Skip creation of index, because it already exists.")
-
-    return None
-
-
-def __removeIndex(index: str, exitAfterRemoval: bool = True) -> None:
-    """
-    Removing an index in the database if it exists.
-
-    :param index: The name of the index to remove
-    :type index: str
-    :param exitAfterRemoval: Whether to exit the program after removing the index (default: True)
-    :type exitAfterRemoval: bool
-    :return: None
-    :rtype: None
-    """
-    index = __prepareIndexName(index)
-
-    if es.indices.exists(index=index):
-        log.debug("Removing index: {}".format(index))
-        es.indices.delete(index=index)
-    else:
-        log.debug("Skip to removing index, because it is not existing.")
-
-    if exitAfterRemoval:
-        log.debug("End program after removing index.")
-        sys.exit()
-    else:
-        return None
 
 
 def __initialize_mqtt_client() -> mqtt.Client:
@@ -493,16 +333,13 @@ def on_message(client: mqtt.Client, userdata: dict, msg: mqtt.MQTTMessage) -> No
     for topic in topic2index.keys():
         if mqtt.topic_matches_sub(topic, msg.topic):
             log.debug(f"MQTT message topic {msg.topic} matches configured topic {topic}")
-            index = __prepareIndexName(topic2index[topic]["elasticIndex"])
 
-            # check if index exist, if not trigger creation
-            if not es.indices.exists(index=index):
-                __createIndex(index, topic2index[topic]["elasticBody"])
-
-            log.info(f"Add data to index: {index}")
-            res = es.index(index=index, body=json.dumps(PAYLOAD))
-            log.debug(f"Result: {res['result']}")
-
+            insert_data(
+                con=es,
+                index=topic2index[topic]["elasticIndex"],
+                body=topic2index[topic]["elasticBody"],
+                data=PAYLOAD,
+            )
             metrics["objects_written_to_db"].labels(object_type=topic).inc()
             return
     else:
@@ -538,7 +375,10 @@ if __name__ == "__main__":
     )
 
     # Initialize database connection
-    es = __initialize_db_connection()
+    es = initialize_db_connection(
+        db_password=__db_password__,
+        api_key=__api_key__,
+    )
 
     # Initialize MQTT client
     client = __initialize_mqtt_client()
