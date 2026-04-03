@@ -1,0 +1,45 @@
+{
+  "location/oitc-acs/entrypoints/+/access": {
+    "elasticIndex": "oitc-acs-entrypoint-access-{Y}-{m}",
+    "elasticBody": {
+      "settings": {
+        "index": {
+          "number_of_shards": 5,
+          "number_of_replicas": 0
+        }
+      },
+      "mappings": {
+        "properties": {
+          "timestamp": { "type": "timestamp" },
+          "entrypoint_ip": { "type": "ip" },
+          "entrypoint_location": { "type": "keyword" },
+          "transponder_uid": { "type": "keyword" },
+          "user_id": { "type": "keyword" },
+          "user_dn": { "type": "keyword" },
+          "user_display_name": { "type": "keyword" },
+          "status": { "type": "keyword" },
+          "notification": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "location/oitc-acs/general/status": {
+    "elasticIndex": "oitc-acs-general-status-{Y}-{m}",
+    "elasticBody": {
+      "settings": {
+        "index": {
+          "number_of_shards": 5,
+          "number_of_replicas": 0
+        }
+      },
+      "mappings": {
+        "properties": {
+          "timestamp": { "type": "timestamp" },
+          "severity": { "type": "keyword" },
+          "status": { "type": "keyword" },
+          "description": { "type": "text" }
+        }
+      }
+    }
+  }
+}
