@@ -55,8 +55,6 @@ The container get's the configuration from environment variables.
 | `MQTT_USERNAME`             | The MQTT username for MQTT authentication.                                                      | OPTIONAL      |                                      |
 | `MQTT_PASSWORD`             | The MQTT password for MQTT authentication.                                                      | OPTIONAL      |                                      |
 | `MQTT_PASSWORD_FILE`        | The filepath where the MQTT password is stored for MQTT authentication.                         | OPTIONAL      |                                      |
-| `MQTT_TOPIC_ACS_STATUS`     | The MQTT topic to subscribe that contains the status messages of the ACS.                       | **MANDATORY** |                                      |
-| `MQTT_TOPIC_DOOR_ACCESS`    | The MQTT topic to subscribe that contains the door access information.                          | **MANDATORY** |                                      |
 | `DB_TYPE`                   | The database type is one of `opensearch` or `elasticsearch`                                     | OPTIONAL      | `opensearch`                         |
 | `DB_CLUSTER_NODES`          | Comma separated list of cluster nodes (`hostname:port`)                                         | OPTIONAL      | `localhost:9200`                     |
 | `DB_TLS`                    | Should SSL communication be enabled (`true`) or not (`false`).                                  | OPTIONAL      | `false`                              |
