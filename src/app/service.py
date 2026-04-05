@@ -16,12 +16,11 @@ import sys
 import paho.mqtt.client as mqtt
 import prometheus_client as prom
 import pytz
-
-from .lib.elastic_functions import initialize_db_connection, insert_data
+from lib.elastic_functions import initialize_db_connection, insert_data
 
 __author__ = "Michael Oberdorf <info@oberdorf-itc.de>"
 __status__ = "production"
-__date__ = "2026-04-03"
+__date__ = "2026-04-05"
 __version_info__ = ("1", "0", "0")
 __version__ = ".".join(__version_info__)
 
@@ -75,10 +74,6 @@ def __validate_configuration() -> tuple[str, str]:
     """
     if os.environ.get("MQTT_SERVER", None) is None:
         raise ValueError("MQTT_SERVER environment variable is not set.")
-    if os.environ.get("MQTT_TOPIC_DOOR_ACCESS", None) is None:
-        raise ValueError("MQTT_TOPIC_DOOR_ACCESS environment variable is not set.")
-    if os.environ.get("MQTT_TOPIC_ACS_STATUS", None) is None:
-        raise ValueError("MQTT_TOPIC_ACS_STATUS environment variable is not set.")
 
     # validate and read db user password from environment variables or files
     __db_password__ = None

@@ -16,7 +16,7 @@ from opensearchpy import OpenSearch
 
 __author__ = "Michael Oberdorf <info@oberdorf-itc.de>"
 __status__ = "production"
-__date__ = "2026-04-03"
+__date__ = "2026-04-05"
 __version_info__ = ("1", "0", "0")
 __version__ = ".".join(__version_info__)
 
@@ -50,9 +50,11 @@ def initialize_db_connection(db_password: str = None, api_key: str = None) -> El
             hosts.append(f"{proto}://{host}")
         verify_certs = True
         ssl_assert_hostname = True
+        ssl_assert_fingerprint = True
         if os.environ.get("DB_TLS_INSECURE", "false").lower() == "true":
             verify_certs = False
             ssl_assert_hostname = False
+            ssl_assert_fingerprint = False
             log.debug("Configure OpenSearch connection to use TLS with insecure mode.")
 
         es = Elasticsearch(
@@ -61,10 +63,11 @@ def initialize_db_connection(db_password: str = None, api_key: str = None) -> El
             http_compress=True,  # enables gzip compression for request bodies
             verify_certs=verify_certs,
             ssl_assert_hostname=ssl_assert_hostname,
+            ssl_assert_fingerprint=ssl_assert_fingerprint,
             ssl_show_warn=False,
             ca_certs=os.environ.get("DB_CACERT_FILE", "/etc/ssl/certs/ca-certificates.crt"),
         )
-        if es.exists():
+        if es.ping():
             log.debug("Successfully connected to Elasticsearch cluster.")
         else:
             raise ConnectionError("Failed to connect to Elasticsearch cluster.")
@@ -81,16 +84,19 @@ def initialize_db_connection(db_password: str = None, api_key: str = None) -> El
             server = host.split(":")[0]
             port = int(host.split(":")[1]) if len(host.split(":")) > 1 else 9200
             hosts.append({"host": server, "port": port})
+        log.debug(f"Configured OpenSearch hosts: {hosts}")
 
         tls = False
-        if os.environ.get("DB_USE_SSL", "false").lower() == "true":
+        if os.environ.get("DB_TLS", "false").lower() == "true":
             tls = True
             log.debug("Configure OpenSearch connection to use TLS encryption.")
         verify_certs = True
         ssl_assert_hostname = True
+        ssl_assert_fingerprint = True
         if os.environ.get("DB_TLS_INSECURE", "false").lower() == "true":
             verify_certs = False
             ssl_assert_hostname = False
+            ssl_assert_fingerprint = False
             log.debug("Configure OpenSearch connection to use TLS with insecure mode.")
 
         es = OpenSearch(
@@ -100,11 +106,12 @@ def initialize_db_connection(db_password: str = None, api_key: str = None) -> El
             use_ssl=tls,
             verify_certs=verify_certs,
             ssl_assert_hostname=ssl_assert_hostname,
+            ssl_assert_fingerprint=ssl_assert_fingerprint,
             ssl_show_warn=False,
             ca_certs=os.environ.get("DB_CACERT_FILE", "/etc/ssl/certs/ca-certificates.crt"),
         )
 
-        if es.exists():
+        if es.ping():
             log.debug("Successfully connected to OpenSearch cluster.")
         else:
             raise ConnectionError("Failed to connect to OpenSearch cluster.")

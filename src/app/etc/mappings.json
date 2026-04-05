@@ -10,7 +10,7 @@
       },
       "mappings": {
         "properties": {
-          "timestamp": { "type": "timestamp" },
+          "timestamp": { "type": "date" },
           "entrypoint_ip": { "type": "ip" },
           "entrypoint_location": { "type": "keyword" },
           "transponder_uid": { "type": "keyword" },
@@ -34,7 +34,7 @@
       },
       "mappings": {
         "properties": {
-          "timestamp": { "type": "timestamp" },
+          "timestamp": { "type": "date" },
           "severity": { "type": "keyword" },
           "status": { "type": "keyword" },
           "description": { "type": "text" }

@@ -17,13 +17,13 @@ class TestElasticFunctions(unittest.TestCase):
         # Clear environment variables before each test
         env_vars = [
             "DB_TYPE",
-            "DB_USE_SSL",
             "DB_CLUSTER_NODES",
             "DB_TLS_INSECURE",
             "DB_CACERT_FILE",
             "DB_USERNAME",
             "DB_PASSWORD",
             "DB_API_KEY",
+            "DB_TLS",
         ]
         for var in env_vars:
             os.environ.pop(var, None)
@@ -44,6 +44,7 @@ class TestElasticFunctions(unittest.TestCase):
             http_compress=True,
             verify_certs=True,
             ssl_assert_hostname=True,
+            ssl_assert_fingerprint=True,
             ssl_show_warn=False,
             ca_certs="/etc/ssl/certs/ca-certificates.crt",
         )
@@ -67,6 +68,7 @@ class TestElasticFunctions(unittest.TestCase):
             http_compress=True,
             verify_certs=True,
             ssl_assert_hostname=True,
+            ssl_assert_fingerprint=True,
             ssl_show_warn=False,
             ca_certs="/etc/ssl/certs/ca-certificates.crt",
         )
@@ -89,6 +91,7 @@ class TestElasticFunctions(unittest.TestCase):
             http_compress=True,
             verify_certs=False,
             ssl_assert_hostname=False,
+            ssl_assert_fingerprint=False,
             ssl_show_warn=False,
             ca_certs="/etc/ssl/certs/ca-certificates.crt",
         )
@@ -99,7 +102,7 @@ class TestElasticFunctions(unittest.TestCase):
         # Test Elasticsearch connection failure
         os.environ["DB_TYPE"] = "elasticsearch"
         mock_instance = MagicMock()
-        mock_instance.exists.return_value = False
+        mock_instance.ping.return_value = False
         mock_es.return_value = mock_instance
 
         with self.assertRaises(ConnectionError):
@@ -110,7 +113,7 @@ class TestElasticFunctions(unittest.TestCase):
         # Test OpenSearch connection with default settings
         os.environ["DB_TYPE"] = "opensearch"
         mock_instance = MagicMock()
-        mock_instance.exists.return_value = True
+        mock_instance.ping.return_value = True
         mock_os.return_value = mock_instance
 
         result = initialize_db_connection()
@@ -122,6 +125,7 @@ class TestElasticFunctions(unittest.TestCase):
             use_ssl=False,
             verify_certs=True,
             ssl_assert_hostname=True,
+            ssl_assert_fingerprint=True,
             ssl_show_warn=False,
             ca_certs="/etc/ssl/certs/ca-certificates.crt",
         )
@@ -132,10 +136,10 @@ class TestElasticFunctions(unittest.TestCase):
         # Test OpenSearch with authentication
         os.environ["DB_TYPE"] = "opensearch"
         os.environ["DB_USERNAME"] = "user"
-        os.environ["DB_USE_SSL"] = "true"
+        os.environ["DB_TLS"] = "true"
         os.environ["DB_CLUSTER_NODES"] = "os.example.com:9200"
         mock_instance = MagicMock()
-        mock_instance.exists.return_value = True
+        mock_instance.ping.return_value = True
         mock_os.return_value = mock_instance
 
         result = initialize_db_connection(db_password="pass")
@@ -147,6 +151,7 @@ class TestElasticFunctions(unittest.TestCase):
             use_ssl=True,
             verify_certs=True,
             ssl_assert_hostname=True,
+            ssl_assert_fingerprint=True,
             ssl_show_warn=False,
             ca_certs="/etc/ssl/certs/ca-certificates.crt",
         )
@@ -158,7 +163,7 @@ class TestElasticFunctions(unittest.TestCase):
         os.environ["DB_TYPE"] = "opensearch"
         os.environ["DB_TLS_INSECURE"] = "true"
         mock_instance = MagicMock()
-        mock_instance.exists.return_value = True
+        mock_instance.ping.return_value = True
         mock_os.return_value = mock_instance
 
         result = initialize_db_connection()
@@ -170,6 +175,7 @@ class TestElasticFunctions(unittest.TestCase):
             use_ssl=False,
             verify_certs=False,
             ssl_assert_hostname=False,
+            ssl_assert_fingerprint=False,
             ssl_show_warn=False,
             ca_certs="/etc/ssl/certs/ca-certificates.crt",
         )
@@ -180,7 +186,7 @@ class TestElasticFunctions(unittest.TestCase):
         # Test OpenSearch connection failure
         os.environ["DB_TYPE"] = "opensearch"
         mock_instance = MagicMock()
-        mock_instance.exists.return_value = False
+        mock_instance.ping.return_value = False
         mock_os.return_value = mock_instance
 
         with self.assertRaises(ConnectionError):
