@@ -1,0 +1,42 @@
+services:
+  logging-service:
+    restart: always
+    user: 2300:2300
+    image: oitc/acs.logging-service:latest
+    container_name: acs.logging-service
+    environment:
+      MQTT_SERVER: test.mosquitto.org
+      MQTT_PORT: 8883
+      MQTT_PROTOCOL_VERSION: 5
+      MQTT_TLS: true
+      MQTT_CACERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      MQTT_TLS_INSECURE: false
+      MQTT_CLIENT_ID: 9dbf7e7e-78ff-454d-8d90-78fd8cc60284
+      MQTT_USERNAME: acs.logging-service
+      #MQTT_PASSWORD: myMQTTPassword
+      MQTT_PASSWORD_FILE: /run/secrets/mqtt_password
+      DB_TYPE: opensearch
+      DB_CLUSTER_NODES: opensearch-node1:9200
+      DB_TLS: true
+      DB_TLS_INSECURE: false
+      DB_CACERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      #DB_API_KEY: myOpensearchApiKey
+      #DB_API_KEY_FILE: /run/secrets/elasticsearch_api_key
+      DB_USERNAME: acs.logging-service
+      #DB_PASSWORD: myOpensearchPassword
+      DB_PASSWORD_FILE: /run/secrets/opensearch_password
+      MAPPING_FILE: /app/etc/mappings.json
+      PROMETHEUS_LISTENER_ADDR: 0.0.0.0
+      PROMETHEUS_LISTENER_PORT: 8080
+      TZ: Europe/Berlin
+    ports:
+      - "8080:8080"
+    secrets:
+      - mqtt_password
+      - opensearch_password
+
+secrets:
+  mqtt_password:
+    file: /srv/docker/acs.smtp-bridge-service/secrets/mqtt_password
+  opensearch_password:
+    file: /srv/docker/acs.logging-service/secrets/opensearch_password

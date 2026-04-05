@@ -1,0 +1,5 @@
+elasticsearch >= 9.3, < 10
+opensearch-py >= 3.1.0, < 4
+paho-mqtt >2, <3
+prometheus_client >0.24, <1
+pytz >=2024.2
